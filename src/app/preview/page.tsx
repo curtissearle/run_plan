@@ -93,7 +93,9 @@ const PdfDocument = ({ plan }: { plan: TrainingPlan }) => (
             {Object.values(week.days).map((day, index) => (
               <View style={styles.tableCol} key={index}>
                 <Text style={styles.cell}>
-                  {day ? `${day.type} ${day.distance || ""}` : "Rest"}
+                  {day && day.length > 0
+                    ? day.map((run) => `${run.type} ${run.distance || ""}`).join(", ")
+                    : "Rest"}
                 </Text>
               </View>
             ))}

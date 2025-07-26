@@ -172,16 +172,31 @@ export const PdfDocument = ({ plan, config }: PdfDocumentProps) => {
                 <Text style={styles.cellText}>{week.week}</Text>
               </View>
               {days.map((day) => {
-                const run = week.days[day];
+                const runs = week.days[day];
                 return (
                   <View style={styles.tableCol} key={day}>
-                    {run ? (
-                      <>
-                        <Text style={styles.cellText}>
-                          {run.distance || "0"}km
-                        </Text>
-                        <Text style={styles.runType}>{run.type}</Text>
-                      </>
+                    {runs && runs.length > 0 ? (
+                      runs.map((run, index) => (
+                        <React.Fragment key={index}>
+                          <View
+                            style={{
+                              marginBottom: index < runs.length - 1 ? 3 : 0,
+                            }}
+                          >
+                            <Text style={styles.cellText}>
+                              {run.distance && run.distance > 0 ? `${run.distance}km` : ""}
+                            </Text>
+                            <Text style={styles.runType}>
+                              {run.nickname
+                                ? `${run.type} - ${run.nickname}`
+                                : run.type}
+                            </Text>
+                          </View>
+                          {runs.length > 1 && index < runs.length - 1 && (
+                            <Text style={{ fontSize: 8, color: '#888', marginVertical: 2 }}>──────────</Text>
+                          )}
+                        </React.Fragment>
+                      ))
                     ) : (
                       <Text style={styles.cellText}>Rest</Text>
                     )}

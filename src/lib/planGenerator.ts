@@ -7,10 +7,12 @@ dayjs.extend(weekOfYear);
 dayjs.extend(isoWeek);
 
 export interface Run {
+  id?: string; // Unique identifier for drag and drop
   type: "Rest" | "Easy" | "Long" | "Interval" | "Tempo" | "Race" | "Strength";
   distance?: number; // in km
   time?: number; // in minutes
   notes?: string;
+  nickname?: string; // Optional nickname for the workout
 }
 
 export type Day = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
@@ -18,7 +20,7 @@ export type Day = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 export interface Week {
   week: number;
   startDate: string;
-  days: Record<Day, Run | null>;
+  days: Record<Day, Run[]>;
   weeklyTotal: number;
 }
 
@@ -96,7 +98,12 @@ export const generatePlan = (inputs: FormValues): TrainingPlan => {
 
   const start = dayjs(todayDate);
   const end = dayjs(raceDate);
-  const totalWeeks = end.diff(start, "week");
+  
+  // Calculate total weeks needed to include the race date
+  // We need to ensure the race week is included in the plan
+  const firstWeekStart = start.startOf('isoWeek');
+  const raceWeekStart = end.startOf('isoWeek');
+  const totalWeeks = raceWeekStart.diff(firstWeekStart, 'week') + 1;
 
   // Handle edge cases
   if (totalWeeks <= 0) {
@@ -140,32 +147,38 @@ export const generatePlan = (inputs: FormValues): TrainingPlan => {
     const weekStartDate = start.add(i, "week").startOf("isoWeek");
     const weekNumber = i + 1;
 
-    const days: Record<Day, Run | null> = {
-      Mon: null,
-      Tue: null,
-      Wed: null,
-      Thu: null,
-      Fri: null,
-      Sat: null,
-      Sun: null,
+    const days: Record<Day, Run[]> = {
+      Mon: [],
+      Tue: [],
+      Wed: [],
+      Thu: [],
+      Fri: [],
+      Sat: [],
+      Sun: [],
     };
 
     let weeklyTotal = 0;
 
-    trainingDays.forEach(({ day, runType }) => {
+    trainingDays.forEach(({ day, workouts }) => {
       const dayName = day as Day;
-      const distance = getRunDistance(
-        runType as Run["type"],
-        weekNumber,
-        limitedWeeks,
-        maxRaceDistance
-      );
-      // Always create a run object if it's a designated training day
-      days[dayName] = {
-        type: runType as Run["type"],
-        distance: Math.max(0, distance),
-      };
-      weeklyTotal += Math.max(0, distance);
+      workouts.forEach(({ runType, nickname }) => {
+        const distance = getRunDistance(
+          runType as Run["type"],
+          weekNumber,
+          limitedWeeks,
+          maxRaceDistance
+        );
+        // Add run to the day's workout array
+        days[dayName].push({
+          id: `${weekNumber}-${dayName}-${runType}-${Math.random()
+            .toString(36)
+            .substr(2, 9)}`,
+          type: runType as Run["type"],
+          distance: Math.max(0, distance),
+          nickname: nickname || undefined,
+        });
+        weeklyTotal += Math.max(0, distance);
+      });
     });
 
     weeks.push({
@@ -181,12 +194,21 @@ export const generatePlan = (inputs: FormValues): TrainingPlan => {
     const lastWeek = weeks[weeks.length - 1];
     const raceDay = dayjs(raceDate).format("ddd") as Day;
 
-    // Subtract old run distance if race day replaces a scheduled run
-    if (lastWeek.days[raceDay]) {
-      lastWeek.weeklyTotal -= lastWeek.days[raceDay]?.distance || 0;
+    // Subtract old run distances if race day replaces scheduled runs
+    if (lastWeek.days[raceDay] && lastWeek.days[raceDay].length > 0) {
+      lastWeek.weeklyTotal -= lastWeek.days[raceDay].reduce(
+        (total, run) => total + (run.distance || 0),
+        0
+      );
     }
 
-    lastWeek.days[raceDay] = { type: "Race", distance: maxRaceDistance };
+    lastWeek.days[raceDay] = [
+      {
+        id: `race-${raceDay}-${Math.random().toString(36).substr(2, 9)}`,
+        type: "Race",
+        distance: maxRaceDistance,
+      },
+    ];
     lastWeek.weeklyTotal += maxRaceDistance;
     lastWeek.weeklyTotal = Math.round(lastWeek.weeklyTotal);
   }

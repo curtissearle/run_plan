@@ -189,7 +189,7 @@ export default function PdfConfigurator({
             <div className="px-4 py-2 bg-gray-50 border-b">
               <h3 className="font-semibold text-gray-800">Live Preview</h3>
             </div>
-            <div className="h-96 w-full">
+            <div className="h-96 w-full h-full">
               <PDFViewer
                 width="100%"
                 height="100%"

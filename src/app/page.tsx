@@ -1,103 +1,114 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect } from "react";
+import InputForm, { FormValues } from "@/components/InputForm";
+import TrainingTable from "@/components/TrainingTable";
+import { generatePlan, TrainingPlan } from "@/lib/planGenerator";
+import { useLocalStorage } from "@/lib/storage";
+import PdfConfigurator from "@/components/pdf/PdfConfigurator";
+import { PdfDocument } from "@/components/pdf/PdfDocument";
+import { PDFViewer } from "@react-pdf/renderer";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [formValues, setFormValues] = useLocalStorage<FormValues | null>(
+    "training-form-values",
+    null
+  );
+  const [plan, setPlan] = useLocalStorage<TrainingPlan | null>(
+    "training-plan",
+    null
+  );
+  const [step, setStep] = useState(1);
+  const [isClient, setIsClient] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (isClient && plan && plan.weeks.length > 0) {
+      setStep(2);
+    }
+  }, [isClient, plan]);
+
+  const handleFormSubmit = (data: FormValues) => {
+    setFormValues(data);
+    const newPlan = generatePlan(data);
+    setPlan(newPlan);
+    setStep(2);
+  };
+
+  const handleReset = () => {
+    setPlan(null);
+    setFormValues(null);
+    setStep(1);
+  };
+
+  const handleUpdatePlan = (newPlan: TrainingPlan) => {
+    setPlan(newPlan);
+  };
+
+  if (!isClient) {
+    return null; // Or a loading spinner, to avoid hydration mismatch
+  }
+
+  return (
+    <ErrorBoundary>
+      <div className="bg-gray-50 min-h-screen">
+        <div className="container mx-auto p-4 sm:p-8">
+          <header className="text-center mb-8">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">
+              🏃‍♂️ Running Plan Generator
+            </h1>
+            <p className="text-md sm:text-lg text-gray-600 mt-2">
+              Generate and customize your personal race training plan.
+            </p>
+          </header>
+          <main className="max-w-7xl mx-auto">
+            {step === 1 && (
+              <InputForm onSubmit={handleFormSubmit} initialValues={formValues} />
+            )}
+            {step === 2 && plan && (
+              <>
+                <TrainingTable plan={plan} onUpdatePlan={handleUpdatePlan} />
+                <div className="flex justify-center items-center gap-4 mt-8">
+                  <button
+                    onClick={() => setStep(1)}
+                    className="inline-block bg-gray-600 text-white py-2 px-6 rounded-lg hover:bg-gray-700 font-semibold"
+                  >
+                    Back to Form
+                  </button>
+                  <button
+                    onClick={handleReset}
+                    className="inline-block bg-red-600 text-white py-2 px-6 rounded-lg hover:bg-red-700 font-semibold"
+                  >
+                    Start Over
+                  </button>
+                  <button
+                    onClick={() => setStep(3)}
+                    className="inline-block bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 font-semibold"
+                  >
+                    Configure & Preview PDF
+                  </button>
+                </div>
+              </>
+            )}
+            {step === 3 && plan && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="md:col-span-1">
+                  <PdfConfigurator onBack={() => setStep(2)} plan={plan} />
+                </div>
+                <div className="md:col-span-2">
+                  <PDFViewer style={{ width: "100%", height: "80vh" }}>
+                    <PdfDocument plan={plan} />
+                  </PDFViewer>
+                </div>
+              </div>
+            )}
+          </main>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

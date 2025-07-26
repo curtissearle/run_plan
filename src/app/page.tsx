@@ -6,8 +6,6 @@ import TrainingTable from "@/components/TrainingTable";
 import { generatePlan, TrainingPlan } from "@/lib/planGenerator";
 import { useLocalStorage } from "@/lib/storage";
 import PdfConfigurator from "@/components/pdf/PdfConfigurator";
-import { PdfDocument } from "@/components/pdf/PdfDocument";
-import { PDFViewer } from "@react-pdf/renderer";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 export default function Home() {
@@ -67,7 +65,10 @@ export default function Home() {
           </header>
           <main className="max-w-7xl mx-auto">
             {step === 1 && (
-              <InputForm onSubmit={handleFormSubmit} initialValues={formValues} />
+              <InputForm
+                onSubmit={handleFormSubmit}
+                initialValues={formValues}
+              />
             )}
             {step === 2 && plan && (
               <>
@@ -95,16 +96,7 @@ export default function Home() {
               </>
             )}
             {step === 3 && plan && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="md:col-span-1">
-                  <PdfConfigurator onBack={() => setStep(2)} plan={plan} />
-                </div>
-                <div className="md:col-span-2">
-                  <PDFViewer style={{ width: "100%", height: "80vh" }}>
-                    <PdfDocument plan={plan} />
-                  </PDFViewer>
-                </div>
-              </div>
+              <PdfConfigurator onBack={() => setStep(2)} plan={plan} />
             )}
           </main>
         </div>

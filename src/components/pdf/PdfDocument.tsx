@@ -11,6 +11,17 @@ import {
 } from "@react-pdf/renderer";
 import { TrainingPlan, Day } from "@/lib/planGenerator";
 
+interface PdfConfig {
+  orientation: "portrait" | "landscape";
+  title: string;
+  headerColor: string;
+}
+
+interface PdfDocumentProps {
+  plan: TrainingPlan;
+  config: PdfConfig;
+}
+
 // Register fonts
 Font.register({
   family: "Oswald",
@@ -55,7 +66,7 @@ const styles = StyleSheet.create({
   },
   tableColHeaderWeek: {
     width: "13%",
-     borderStyle: "solid",
+    borderStyle: "solid",
     borderWidth: 1,
     borderColor: "#e5e7eb",
     borderLeftWidth: 0,
@@ -65,7 +76,7 @@ const styles = StyleSheet.create({
   },
   tableColHeaderTotal: {
     width: "14%",
-     borderStyle: "solid",
+    borderStyle: "solid",
     borderWidth: 1,
     borderColor: "#e5e7eb",
     borderLeftWidth: 0,
@@ -118,40 +129,72 @@ const styles = StyleSheet.create({
 
 const days: Day[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-export const PdfDocument = ({ plan }: { plan: TrainingPlan }) => (
-  <Document>
-    <Page size="A4" style={styles.page}>
-      <Text style={styles.title}>Your Training Plan</Text>
-      <View style={styles.table}>
-        {/* Header */}
-        <View style={styles.tableRow}>
-          <View style={styles.tableColHeaderWeek}><Text style={styles.headerText}>Week</Text></View>
-          {days.map(day => <View key={day} style={styles.tableColHeader}><Text style={styles.headerText}>{day}</Text></View>)}
-          <View style={styles.tableColHeaderTotal}><Text style={styles.headerText}>Total (KM)</Text></View>
-        </View>
-        {/* Body */}
-        {plan.weeks.map((week) => (
-          <View style={styles.tableRow} key={week.week}>
-            <View style={styles.tableColWeek}><Text style={styles.cellText}>{week.week}</Text></View>
-            {days.map(day => {
-              const run = week.days[day];
-              return (
-                <View style={styles.tableCol} key={day}>
-                  {run ? (
-                    <>
-                      <Text style={styles.cellText}>{run.distance || "0"}km</Text>
-                      <Text style={styles.runType}>{run.type}</Text>
-                    </>
-                  ) : (
-                    <Text style={styles.cellText}>Rest</Text>
-                  )}
-                </View>
-              )
-            })}
-            <View style={styles.tableColTotal}><Text style={styles.cellText}>{week.weeklyTotal}</Text></View>
+export const PdfDocument = ({ plan, config }: PdfDocumentProps) => {
+  // Create dynamic styles based on config
+  const dynamicStyles = StyleSheet.create({
+    tableColHeader: {
+      ...styles.tableColHeader,
+      backgroundColor: config.headerColor,
+    },
+    tableColHeaderWeek: {
+      ...styles.tableColHeaderWeek,
+      backgroundColor: config.headerColor,
+    },
+    tableColHeaderTotal: {
+      ...styles.tableColHeaderTotal,
+      backgroundColor: config.headerColor,
+    },
+  });
+
+  return (
+    <Document>
+      <Page size="A4" orientation={config.orientation} style={styles.page}>
+        <Text style={styles.title}>{config.title}</Text>
+        <View style={styles.table}>
+          {/* Header */}
+          <View style={styles.tableRow}>
+            <View style={dynamicStyles.tableColHeaderWeek}>
+              <Text style={styles.headerText}>Week</Text>
+            </View>
+            {days.map((day) => (
+              <View key={day} style={dynamicStyles.tableColHeader}>
+                <Text style={styles.headerText}>{day}</Text>
+              </View>
+            ))}
+            <View style={dynamicStyles.tableColHeaderTotal}>
+              <Text style={styles.headerText}>Total (KM)</Text>
+            </View>
           </View>
-        ))}
-      </View>
-    </Page>
-  </Document>
-);
+          {/* Body */}
+          {plan.weeks.map((week) => (
+            <View style={styles.tableRow} key={week.week}>
+              <View style={styles.tableColWeek}>
+                <Text style={styles.cellText}>{week.week}</Text>
+              </View>
+              {days.map((day) => {
+                const run = week.days[day];
+                return (
+                  <View style={styles.tableCol} key={day}>
+                    {run ? (
+                      <>
+                        <Text style={styles.cellText}>
+                          {run.distance || "0"}km
+                        </Text>
+                        <Text style={styles.runType}>{run.type}</Text>
+                      </>
+                    ) : (
+                      <Text style={styles.cellText}>Rest</Text>
+                    )}
+                  </View>
+                );
+              })}
+              <View style={styles.tableColTotal}>
+                <Text style={styles.cellText}>{week.weeklyTotal}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </Page>
+    </Document>
+  );
+};
